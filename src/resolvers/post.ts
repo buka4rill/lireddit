@@ -17,6 +17,7 @@ export class PostResolver {
     // Query returns Array of Posts
     @Query(() => [Post]) // Convert Entity to Graphql type; this line shows the return value
     posts( @Ctx() ctx: MyContext ): Promise<Post[]> {
+        
         // Return an array of Posts
         return ctx.em.find(Post, {});
     }
@@ -26,6 +27,7 @@ export class PostResolver {
     post( 
         @Arg('id', () => Int) id: number,
         @Ctx() { em }: MyContext ): Promise<Post | null> {
+        
         // Return an array of Posts
         return em.findOne(Post, { id });
     }
