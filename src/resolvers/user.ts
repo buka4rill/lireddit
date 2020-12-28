@@ -1,6 +1,8 @@
+// USER RESOLVER (GRAPHQL)
+
 import { User } from '../entities/User';
 import { MyContext } from '../types';
-import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Resolver } from 'type-graphql';
+import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
 import argon from "argon2";
 
 /**
@@ -43,7 +45,7 @@ export class UserResolver
 
     // Register a User
     @Mutation(() => UserResponse) 
-    async register( @Arg('input') input: UsernamePasswordInput, @Ctx() { em }: MyContext ): Promise<UserResponse> 
+    async register( @Arg('input') input: UsernamePasswordInput, @Ctx() { em, req }: MyContext ): Promise<UserResponse> 
     {
         // Ensure Username is present
         if (input.username.length <= 2) {
@@ -94,17 +96,20 @@ export class UserResolver
                 }
             }
             
-            console.log(err);
+            // console.log(err);
         }
 
-        
+        // Store user id session
+        // this will set the cookie of the user
+        // and keep them logged in
+        req.session.userId = user.id;
 
         return { user };
     }
 
     // Login a User
     @Mutation(() => UserResponse) 
-    async login( @Arg('input') input: UsernamePasswordInput, @Ctx() { em }: MyContext ): Promise<UserResponse> 
+    async login( @Arg('input') input: UsernamePasswordInput, @Ctx() { em, req }: MyContext ): Promise<UserResponse> 
     {
         // Check for user by username
         const user = await em.findOne(User, { username: input.username });
@@ -137,6 +142,22 @@ export class UserResolver
         // save User to db
         await em.persistAndFlush(user);
 
+        // Session
+        req.session.userId = user.id;
+
         return { user };
+    }
+
+    // Return Current User if Logged in
+    @Query(() => User, { nullable: true })
+    async me( @Ctx() { req, em }: MyContext ) {
+        console.log("session: ", req.session)
+        // user not logged in
+        if (!req.session.userId) {
+            return null
+        }
+
+        const user = await em.findOne(User, { id: req.session.userId });
+        return user;
     }
 }
