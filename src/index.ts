@@ -20,6 +20,9 @@ import session from 'express-session';
 import connectRedis from 'connect-redis';
 import { MyContext } from "./types";
 
+// Cors
+import cors from 'cors';
+
 
 const main = async () => {
     // Connect to db
@@ -48,25 +51,31 @@ const main = async () => {
     const RedisStore = connectRedis(session);
     const redisClient = redis.createClient();
 
+    // Cors
+    app.use(cors({
+        origin: "http://localhost:3000",
+        credentials: true
+    }))
+
     app.use(
-    session({
-        name: 'qid', // Name of cookie
-        store: new RedisStore({ 
-            client: redisClient,
-            disableTouch: true
-         }),
-        cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
-            httpOnly: true, // Can't access cookie in FE code
-            secure: __prod__, // Cookie only works in https
-            sameSite: 'lax', // csrf
-            // secure: false // Cookie only works in https (false)
-        },
-        saveUninitialized: false,
-        secret: 'verystrongsecretpassword',
-        resave: false,
-    })
-    )
+        session({
+            name: 'qid', // Name of cookie
+            store: new RedisStore({ 
+                client: redisClient,
+                disableTouch: true
+            }),
+            cookie: {
+                maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
+                httpOnly: true, // Can't access cookie in FE code
+                secure: __prod__, // Cookie only works in https
+                sameSite: 'lax', // csrf
+                // secure: false // Cookie only works in https (false)
+            },
+            saveUninitialized: false,
+            secret: 'verystrongsecretpassword',
+            resave: false,
+        })
+    );
 
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
@@ -77,7 +86,12 @@ const main = async () => {
     });
 
     // Create Graphql Endpoint on Express
-    apolloServer.applyMiddleware({ app });
+    // Set CORS globally with Express middleware - yarn add cors (and types)
+    apolloServer.applyMiddleware({ 
+        app, 
+        // cors: { origin: "http://localhost:3000"} 
+        cors: false,
+    });
 
     // Listen
     app.listen(4000, () => {
