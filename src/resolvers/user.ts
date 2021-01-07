@@ -4,10 +4,12 @@ import { User } from '../entities/User';
 import { MyContext } from '../types';
 import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver } from 'type-graphql';
 import argon from "argon2";
+import { COOKIE_NAME } from '../constants';
 
 /**
     * Instead of having multiple Args, the class is created
     * ObjectTypes can be returned in mutation, InputTypes in are used in Args
+    * Set "request.credentials" key in GraphQL playground to "include"
  */
 
 // A different way to do Args in GQL using Input types
@@ -159,5 +161,21 @@ export class UserResolver
 
         const user = await em.findOne(User, { id: req.session.userId });
         return user;
+    }
+
+    @Mutation(() => Boolean)
+    logout(@Ctx() { req, res }: MyContext) {
+        return new Promise(resolver => req.session.destroy(err => {
+            // Clear cookie
+            res.clearCookie(COOKIE_NAME);
+
+            if (err) {
+                console.log(err);
+                resolver(false);
+                return;
+            } 
+            
+            resolver(true);
+        }));
     }
 }
